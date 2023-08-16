@@ -12,26 +12,32 @@ Load_Social_Contact_Data = function(){
 	                    header=T,sep="\t")
 	contdata=read.table(paste(dir,"contacts_be_final.txt",sep=""),
 	                    header=T,sep="\t")
+	
 	dim(contdata)
 	dim(partdata)
-  #edit(partdata)
+	
+	#edit(partdata)
 	#sum(partdata$diary_weight)
 
 	# A closer look at the participants data
+	#' participant's maximum age is 84, not sure why this is 77
+	#' needs to be adapted later?
+	
 	partdata = partdata[partdata$participant_age < 77,]
-		#str(partdata)
+	#str(partdata)
 	range(partdata$participant_age)
 	mean(partdata$participant_age)
 	# hist(partdata$participant_age,nclass=100)
 	table(partdata$participant_age)
 	table(partdata$participant_gender)
 
-
 	# contact data
 	contdata = contdata[contdata$global_id %in% partdata$global_id,]
+	#' contact's maximum age is 98 adapt later...
 	contdata = contdata[contdata$cnt_age_mean < 77,]
 	contdata = contdata[!is.na(contdata$cnt_age_mean),]
-		#str(contdata)
+	
+	#str(contdata)
 
 
 	# Read in demography: 
@@ -48,7 +54,9 @@ Load_Social_Contact_Data = function(){
 	tilde.e=hist(partdata$participant_age,breaks=seq(0,100,1)-0.5,
 	             plot=F)$counts[1:77]
 	
-	partdata$diary_weight2 = partdata$diary_weight/sum(partdata$diary_weight)*745
+	#' before ---> ... * 745
+	#' now ---> ... * nrow(partdata)
+	partdata$diary_weight2 = partdata$diary_weight/sum(partdata$diary_weight)*nrow(partdata)
 	tilde.e.2 = tapply(partdata$diary_weight2, partdata$participant_age, sum)
 	sum(tilde.e.2)
 	cbind(tilde.e, tilde.e.2)
