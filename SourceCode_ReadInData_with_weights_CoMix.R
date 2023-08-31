@@ -8,13 +8,18 @@
 #' to linearly estimating age group sizes from the 5-year age bands
 #' since wpp_countries function is using 5 years age band population data
 #' 
+#' 31/09/2023 --> update
+#' estimated_participant_age, if T, estimated uniformly based on the range
+#' estimated_contact_age, if T, estimated uniformly based on the range
+#' 
 #' Authors: Neilshan Loedy and Oswaldo Gressani
-#' File last updated on 12/08/2023
+#' File last updated on 31/09/2023
 #_____________________________________________________________________
 
 library(socialmixr)
 library(data.table)
 library(dplyr)
+library(gdata)
 
 #' (pop) --> if pop is not described, pop is using data from wpp_countries
 #' from the socialmixr library
@@ -71,6 +76,10 @@ pop_func <- function (pop, age.limits, pop.age.column = "lower.age.limit",
 #' (participant_data_input) --> the participant data from the comix survey
 #' (contact_data_input) --> the contact data from the comix survey
 #' (country_input) --> the template is Belgium, this will be useful for adjusting the population
+#' (estimated_participant_age) = T --> if T, then resample uniformly from part_age_est_max and min.
+#' if False, we use the age of the participants from the data
+#' (estimated_contact_age) = T --> if T, then resample uniformly from cnt_age_est_max and min
+#' if False, we use the mean of the cnt_age_est_max and min; since all the cnt_age is NA
 #' data from the wpp_countries function inside the socialmixr
 #' (weigh_dayofweek_input) --> to weigh regarding weekday or weekend, to enable this function,
 #' we need to have dayofweek column in the dataset, with input is 0, 1, ..., 6 (Sunday, Monday, ... Saturday)
@@ -87,6 +96,8 @@ pop_func <- function (pop, age.limits, pop.age.column = "lower.age.limit",
 Load_Social_Contact_Data_Comix <- function(participant_data_input = partdata,
                                            contact_data_input = contdata,
                                            country_input = c("Belgium"),
+                                           estimated_participant_age = T,
+                                           estimated_contact_age = T,
                                            weigh_dayofweek_input = T,
                                            weigh_age_input = T,
                                            age_breaks_input = NULL,
@@ -95,12 +106,48 @@ Load_Social_Contact_Data_Comix <- function(participant_data_input = partdata,
                                            maximum_age = NULL,
                                            pop_data_input = NULL){
   
+  if(estimated_participant_age) {
+    maximum_age <- maximum_age
+    
+    if(!is.null(maximum_age)) {
+      maximum_age <- 100
+    }
+    
+    participant_data_input$part_age <- mapply(function(x, y)
+      if(is.na(x) == F & is.na(y) == F){
+        # sample an age based on the min and max age they reported
+        resample(seq(x, y), 1)
+      } else {
+        # if no age was reported, sample between 0-120
+        resample(seq(0,maximum_age), 1)
+      }, participant_data_input$part_age_est_min, participant_data_input$part_age_est_min)
+    
+  }
+  
+  if(estimated_contact_age) {
+    maximum_age <- maximum_age
+    
+    if(!is.null(maximum_age)) {
+      maximum_age <- 100
+    }
+    
+    # sampling contact age
+    contact_data_input$cnt_age_mean <- mapply(function(x, y)
+      if(is.na(x) == F & is.na(y) == F){
+        # sample an age based on the min and max age they reported
+        resample(seq(x, y), 1)
+      } else {
+        # if no age was reported, sample between 0-120
+        resample(seq(0,maximum_age), 1)
+      }, contact_data_input$cnt_age_est_min, contact_data_input$cnt_age_est_max)
+  } else {
+    contact_data_input$cnt_age_mean <- apply(contact_data_input[, c("cnt_age_est_min", "cnt_age_est_max")], 1, mean)
+  }
+  
   if(!is.null(wave)){
     participant_data_input = participant_data_input[participant_data_input$wave %in% wave,]
     contact_data_input = contact_data_input[contact_data_input$part_id %in% participant_data_input$part_id,]
   }
-  
-  contact_data_input$cnt_age_mean <- apply(contact_data_input[, c("cnt_age_est_min", "cnt_age_est_max")], 1, mean)
   
   if(!is.null(maximum_age)){
     participant_data_input = participant_data_input[participant_data_input$part_age < maximum_age,]

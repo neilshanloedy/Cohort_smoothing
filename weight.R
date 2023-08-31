@@ -17,11 +17,19 @@ participants <- merge(part_common, part_extra, by = c("part_id"))
 participants <- rename(participants, dayofweek = weekday)
 population_2023 <- read.table("Data/Demography/population_2023.txt")
 
+
+participant_data_input = participants
+contact_data_input = contact_common
+wave = 12
+pop_data_input = population_2023
+maximum_age = 77
+weigh_age_input = F
+weigh_dayofweek_input = T
+
 Load_Social_Contact_Data_Comix(participant_data_input = participants,
                                contact_data_input = contact_common,
-                               wave = 12,
+                               wave = 43,
                                pop_data_input = population_2023,
                                maximum_age = 77,
                                weigh_age_input = T,
                                weigh_dayofweek_input = T)
-
