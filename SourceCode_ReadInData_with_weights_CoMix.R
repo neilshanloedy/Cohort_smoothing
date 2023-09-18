@@ -106,29 +106,57 @@ Load_Social_Contact_Data_Comix <- function(participant_data_input = partdata,
                                            maximum_age = NULL,
                                            pop_data_input = NULL){
   
+  minimum_age <- min(participant_data_input$part_age, na.rm = T)
+  
   if(estimated_participant_age) {
     maximum_age <- maximum_age
     
-    if(!is.null(maximum_age)) {
+    if(is.null(maximum_age)) {
       maximum_age <- 100
+    } else {
+      maximum_age <- maximum_age
     }
     
-    participant_data_input$part_age <- mapply(function(x, y)
+    # Create a function to recode part_age
+    recoded_age <- function(age) {
+      ifelse(is.na(age), NA,  # Keep NA values as is
+             if (age == 0) {
+               sample(c(0, 1), 1)
+             } else if (age == 2) {
+               sample(seq(2, 7), 1)
+             } else if (age == 8) {
+               sample(seq(8, 12), 1)
+             } else if (age == 13) {
+               sample(seq(13, 16), 1)
+             } else if (age == 16) {
+               sample(seq(16, 17), 1)
+             } else {
+               age
+             })
+    }
+    
+    
+    participant_data_input$part_age <- sapply(participant_data_input$part_age, recoded_age)
+    
+    participant_data_input$part_age <- ifelse(is.na(participant_data_input$part_age), mapply(function(x, y)
       if(is.na(x) == F & is.na(y) == F){
         # sample an age based on the min and max age they reported
         resample(seq(x, y), 1)
       } else {
         # if no age was reported, sample between 0-120
-        resample(seq(0,maximum_age), 1)
-      }, participant_data_input$part_age_est_min, participant_data_input$part_age_est_min)
+        resample(seq(0, maximum_age), 1)
+      }, participant_data_input$part_age_est_min, participant_data_input$part_age_est_max),
+      participant_data_input$part_age)
     
   }
   
   if(estimated_contact_age) {
     maximum_age <- maximum_age
     
-    if(!is.null(maximum_age)) {
+    if(is.null(maximum_age)) {
       maximum_age <- 100
+    } else {
+      maximum_age <- maximum_age
     }
     
     # sampling contact age
@@ -249,6 +277,22 @@ Load_Social_Contact_Data_Comix <- function(participant_data_input = partdata,
   }
   
   tilde.e.2 = tapply(survey$participants$weight, survey$participants$part_age, sum)
+  tilde.temp <- data.frame(age = as.numeric(row.names(tilde.e.2)), tilde.e.2)
+  
+  # Find missing age values and their positions
+  df_input <- data.frame(
+    age = minimum_age:(maximum_age-1),      # Generate a sequence from 1 to 83 for the 'age' column
+    tilde.e.2 = 1   # Set 'tilde.e.2' column to 1 for all rows
+  )
+  
+  # Merge and replace values using dplyr
+  merged_df <- tilde.temp %>%
+    full_join(df_input, by = "age") %>%
+    mutate(tilde.e.2 = if_else(!is.na(tilde.e.2.x), tilde.e.2.x, tilde.e.2.y)) %>%
+    select(-tilde.e.2.x, -tilde.e.2.y) %>% 
+    arrange(age)
+  
+  tilde.e.2 <- array(unlist(merged_df$tilde.e.2), dimnames = list(merged_df$age))
   
   # Total number of contacts by age of participants and contacts
   mat.id=NULL
