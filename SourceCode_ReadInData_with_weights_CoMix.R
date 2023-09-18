@@ -127,7 +127,7 @@ Load_Social_Contact_Data_Comix <- function(participant_data_input = partdata,
              } else if (age == 8) {
                sample(seq(8, 12), 1)
              } else if (age == 13) {
-               sample(seq(13, 16), 1)
+               sample(seq(13, 15), 1)
              } else if (age == 16) {
                sample(seq(16, 17), 1)
              } else {
